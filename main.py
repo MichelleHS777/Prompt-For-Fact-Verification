@@ -4,16 +4,13 @@ from datasets import load_dataset
 import argparse
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix,  multilabel_confusion_matrix
 from tqdm import tqdm
-import numpy as np 
-import matplotlib as plt
 from openprompt.data_utils import InputExample
 from openprompt import PromptDataLoader
 from openprompt.prompts import ManualTemplate, SoftTemplate, PTRTemplate, PrefixTuningTemplate, PtuningTemplate,MixedTemplate
 from openprompt.prompts import ManualVerbalizer, SoftVerbalizer, KnowledgeableVerbalizer, AutomaticVerbalizer, GenerationVerbalizer, ProtoVerbalizer
-from openprompt import PromptForClassification, PromptForGeneration
+from openprompt import PromptForClassification, PromptModel
 from openprompt.plms import load_plm
-from sklearn.utils import class_weight
-from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import classification_report
 
 # ------------------------init parameters----------------------------
 parser = argparse.ArgumentParser(description='Prompt Tuning For CHEF')
@@ -35,32 +32,6 @@ args = parser.parse_args()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Evaluate
-# def evaluate(prompt_model, dataloader, desc):
-#     prompt_model.eval()
-#     y_pred = []
-#     y_true = []
-#     pbar = tqdm(dataloader, desc=desc)
-#     for step, inputs in enumerate(pbar):
-#         if use_cuda:
-#             inputs = inputs.cuda()
-#         logits = prompt_model(inputs)
-#         labels = inputs['label']
-#         y_true.extend(labels.cpu().tolist())
-#         y_pred.extend(torch.argmax(logits, dim=-1).cpu().tolist())
-#     acc = sum([int(i==j) for i,j in zip(y_pred, y_true)])/len(y_pred)
-#     print('------Accuracy------')
-#     print("accuracy:{}".format(acc))
-#     print('------Macro------')
-#     print('Macro precision', precision_score(y_true, y_pred, average='macro'))
-#     print('Macro recall', recall_score(y_true, y_pred, average='macro'))
-#     print('Macro f1-score', f1_score(y_true, y_pred, average='macro'))
-#     print('------Micro------')
-#     print('Micro precision', precision_score(y_true, y_pred, average='micro'))
-#     print('Micro recall', recall_score(y_true, y_pred, average='micro'))
-#     print('Micro f1-score', f1_score(y_true, y_pred, average='micro'))
-#     return acc
-
 # Load Dataset
 dataset = {}
 dataset['train'] = []
@@ -75,10 +46,6 @@ for data in train_dataset:
     train_input_example = InputExample(
         text_a = data['evidences'],
         text_b = data['claim'],
-        # meta={
-        #     "前提":data['evidences'], \
-        #     "假设":data['claim'], \
-        # },
         label=int(data['label'])
     )
     dataset['train'].append(train_input_example)
@@ -88,10 +55,6 @@ for data in validation_dataset:
     dev_input_example = InputExample(
         text_a = data['evidences'],
         text_b = data['claim'],
-        # meta={
-        #     "前提":data['evidences'], \
-        #     "假设":data['claim'], \
-        # },
         label=int(data['label'])
     )
     dataset['validation'].append(dev_input_example)
@@ -101,24 +64,16 @@ for data in test_dataset:
     test_input_example = InputExample(
         text_a = data['evidences'],
         text_b = data['claim'],
-        # meta={
-        #     "前提":data['evidences'], \
-        #     "假设":data['claim'], \
-        # },
         label=int(data['label'])
     )
     dataset['test'].append(test_input_example)
 
-# Load PLM 
-# You can load the plm related things provided by openprompt simply by calling
+# Load PLM
 plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
 
 # Constructing Template
-# A template can be constructed from the yaml config, 
-# but it can also be constructed by directly passing arguments.
 if args.template == 0:
     # template_text = '{"placeholder":"text_a","shortenable":True} {"placeholder":"text_b"} 请问这是对的吗?答案: {"mask":None, "length":2}'
-    # template_text = '{"placeholder":"text_a","shortenable":True} 请问「{"placeholder":"text_b"}」是对的吗?答案: {"mask":None, "length":2}'\
     template_text = '{"placeholder":"text_a","shortenable":True} 這是 {"mask":None, "length":2} 的「{"placeholder":"text_b"}」'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
 elif args.template == 1:
@@ -141,39 +96,32 @@ elif args.template == 5:
     template_text = '{"placeholder":"text_a","shortenable":True} {"soft":"這是"} {"mask":None, "length":2} {"soft":"的"} {"soft":"「"} {"placeholder":"text_b"} {"soft":"」"}'
     template = MixedTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 
-# See output of wrapped example
-# wrapped_example = template.wrap_one_example(dataset['train'][0])
-# print(wrapped_example)
-
-# We provide a `PromptDataLoader` class to help you do all the above matters 
-# and wrap them into an `torch.DataLoader` style iterator.
+# Load dataloader
 train_dataloader = PromptDataLoader(
     dataset=dataset["train"], 
     template=template, tokenizer=tokenizer,
-    tokenizer_wrapper_class=WrapperClass, decoder_max_length=3,
-    batch_size=args.batch_size, shuffle=True, teacher_forcing=False, 
-    predict_eos_token=False, truncate_method="tail",max_seq_length=args.max_length
+    tokenizer_wrapper_class=WrapperClass, batch_size=args.batch_size,
+    shuffle=True, teacher_forcing=False, predict_eos_token=False,
+    truncate_method="tail", max_seq_length=args.max_length
 )
 
 validation_dataloader = PromptDataLoader(
     dataset=dataset["validation"], 
     template=template, tokenizer=tokenizer,
-    tokenizer_wrapper_class=WrapperClass, decoder_max_length=3,
-    batch_size=args.batch_size,shuffle=True, teacher_forcing=False, 
-    predict_eos_token=False, truncate_method="tail",max_seq_length=args.max_length
+    tokenizer_wrapper_class=WrapperClass,
+    batch_size=args.batch_size, shuffle=True, teacher_forcing=False,
+    predict_eos_token=False, truncate_method="tail", max_seq_length=args.max_length
 )
 
 test_dataloader = PromptDataLoader(
     dataset=dataset["test"], 
     template=template, tokenizer=tokenizer,
-    tokenizer_wrapper_class=WrapperClass, decoder_max_length=3,
-    batch_size=args.batch_size,shuffle=True, teacher_forcing=False, 
-    predict_eos_token=False, truncate_method="tail",max_seq_length=args.max_length
+    tokenizer_wrapper_class=WrapperClass,
+    batch_size=args.batch_size, shuffle=True, teacher_forcing=False,
+    predict_eos_token=False, truncate_method="tail", max_seq_length=args.max_length
 )
 
 # Define the verbalizer
-# In classification, you need to define your verbalizer, 
-# which is a mapping from logits on the vocabulary to the final label probabilitymodel
 if args.verbalizer == 0:
     verbalizer = ManualVerbalizer(
         classes = [0,1,2], 
@@ -207,11 +155,7 @@ elif args.verbalizer == 5:
         label_words={0:"是的", 1:"不是", 2: "未知"}, 
     )
 
-''' 
-Although you can manually combine the plm, template, verbalizer together, 
-we provide a pipeline model which take the batched data from the PromptDataLoader 
-and produce a class-wise logits
-'''
+# Load prompt model
 if args.template == 0 or 1 or 5:
     prompt_model = PromptForClassification(
         plm=plm, 
@@ -220,14 +164,13 @@ if args.template == 0 or 1 or 5:
     )
 
 elif args.template == 2 or 3:
-    prompt_model = PromptForGeneration(
+    prompt_model = PromptModel(
         plm=plm,
         tokenizer=tokenizer, 
         template=template, 
         freeze_plm=args.freeze,
         plm_eval_mode=args.plm_eval_mode
     )
-
 prompt_model = prompt_model.to(device)
 
 # Now the training is standard
@@ -246,7 +189,7 @@ best_microf1 = 0
 best_macrof1 = 0
 best_recall = 0
 best_precision = 0
-weight = [4349.0/2877, 1, 4349.0/776]
+weight = [1, 1, 4349/776*10]
 class_weight = torch.FloatTensor(weight).to(device)
 loss_func = torch.nn.CrossEntropyLoss(weight=class_weight)
 
@@ -296,7 +239,7 @@ for epoch in range(args.epochs):
         best_microf1 = microf1
         best_macrof1 = f1
         torch.save(prompt_model.state_dict(),f"./checkpoint/model.ckpt")
-    print("Epoch {}, f1 {}".format(epoch, f1), flush=True) 
+    print("Epoch {}, f1 {}".format(epoch, f1), flush=True)
 
 # ========================================
 #               Test
@@ -324,3 +267,5 @@ print("   Recall (macro): {:.2%}".format(recall))
 print("       F1 (macro): {:.2%}".format(f1))
 print("confusion_matrix:\n", confusion_matrix(test_y_true, test_y_pred, labels=[0,1,2]))
 print("multilabel_confusion_matrix:\n", multilabel_confusion_matrix(test_y_true, test_y_pred, labels=[0,1,2]))
+each_label_result = classification_report(test_y_true, test_y_pred)
+print("Each label result:\n", each_label_result)
