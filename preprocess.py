@@ -15,16 +15,20 @@ jsonFile = open(args.save_dataset_path, "w", encoding="utf8")
 evidences = []
 evidence_sentence = ''
 datasets = []
-for row in range (len(datalist)):
+for row in range(len(datalist)):
     # get claimID, claim, label
     claimID = datalist[row]['claimId']
     claim = datalist[row]['claim']
     label = datalist[row]['label']
-    # get gold evidence
-    evidences = [datalist[row]['gold evidence'][str(i)]['text'] for i in range(5) if datalist[row]['gold evidence'][str(i)]['text'] != '']
+
+    # get golden evidence
+    evidences = [datalist[row]['gold evidence'][str(i)]['text'] for i in range(5)
+                 if datalist[row]['gold evidence'][str(i)]['text'] != '']
+
     # write in json file
-    # if len(evidences)!=0:
     evidence_sentence = ''.join([str(evidence) for evidence in evidences])
+    # data = {'claimId': int(claimID), 'claim': claim, 'evidences': evidences, 'label': 1}
+
     data = {'claimId':int(claimID), 'claim':claim, 'evidences':evidence_sentence, 'label':label}
     jsonString = json.dumps(data, ensure_ascii=False)
     # jsonString = json.dumps(data, indent=4, ensure_ascii=False)

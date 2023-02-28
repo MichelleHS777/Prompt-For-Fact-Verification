@@ -4,8 +4,8 @@ import argparse
 import json
 
 parser = argparse.ArgumentParser(description='Preprocess Dataset')
-parser.add_argument('--dataset_path', type=str, default='datasets/unpreprocess/train2.json', help='load dataset to preprocess')
-parser.add_argument('--save_dataset_path', type=str, default='datasets/train2_evidence.json', help='save dataset to path')
+parser.add_argument('--dataset_path', type=str, default='datasets/unpreprocess/train.json', help='load dataset to preprocess')
+parser.add_argument('--save_dataset_path', type=str, default='datasets/train_evidence.json', help='save dataset to path')
 args = parser.parse_args()
 
 datalist = json.load(open(args.dataset_path, 'r', encoding='utf-8'))
@@ -33,15 +33,16 @@ for row in range(len(datalist)):
                      if datalist[row]['evidence'][str(i)]['text'] != '']
     gold_evidences = [datalist[row]['gold evidence'][str(i)]['text'] for i in range(5)
                      if datalist[row]['gold evidence'][str(i)]['text'] != '']
-    # try:
-    search_not_evidence = search_nonEvidence(doc_evidences, gold_evidences)
-    # except:
-    #     print(search_not_evidence)
-    not_evidence = {'claimId':int(claimID), 'claim':claim, "evidence":search_not_evidence, "label":0}
-    gold_evidence = {'claimId': int(claimID), 'claim':claim, "evidence":gold_evidences, "label":1}
-    jsonString = json.dumps(not_evidence, ensure_ascii=False)
-    jsonFile.write(jsonString + "\n")
-    jsonString = json.dumps(gold_evidence, ensure_ascii=False)
-    jsonFile.write(jsonString + "\n")
+
+    not_evidences = search_nonEvidence(doc_evidences, gold_evidences)
+
+    for sentence in not_evidences:
+        not_evidence = {'claimId':int(claimID), 'claim':claim, "evidence":sentence, "label":0}
+        jsonString = json.dumps(not_evidence, ensure_ascii=False)
+        jsonFile.write(jsonString + "\n")
+    for gold in gold_evidences:
+        gold_evidence = {'claimId': int(claimID), 'claim':claim, "evidence":gold, "label":1}
+        jsonString = json.dumps(gold_evidence, ensure_ascii=False)
+        jsonFile.write(jsonString + "\n")
 jsonFile.close()
 print("==================Finish==================")

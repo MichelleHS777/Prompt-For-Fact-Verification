@@ -37,9 +37,9 @@ dataset = {}
 dataset['train'] = []
 dataset['validation'] = []
 dataset['test'] = []
-train_dataset = open('datasets/train.json','r', encoding='utf-8').readlines()
-validation_dataset = open('datasets/dev.json','r', encoding='utf-8').readlines()
-test_dataset = open('datasets/test.json','r', encoding='utf-8').readlines()
+train_dataset = open('datasets/claim verification/train.json','r', encoding='utf-8').readlines()
+validation_dataset = open('datasets/claim verification/dev.json','r', encoding='utf-8').readlines()
+test_dataset = open('datasets/claim verification/test.json','r', encoding='utf-8').readlines()
 
 for data in train_dataset:
     data = eval(data)
