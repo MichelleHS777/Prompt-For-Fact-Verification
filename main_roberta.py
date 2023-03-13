@@ -1,6 +1,9 @@
 import torch
 import torch.nn.functional as F
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup, AutoTokenizer, AutoModelForMaskedLM, RobertaTokenizer, \
+    RobertaModel, BertTokenizer
+
+from openprompt.plms import MLMTokenizerWrapper
 from config import set_args
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, multilabel_confusion_matrix
 from tqdm import tqdm
@@ -16,7 +19,7 @@ from sklearn.metrics import classification_report
 # Load arguments
 args = set_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+print(device)
 
 # Load Dataset
 dataset = {}
@@ -56,7 +59,9 @@ for data in test_dataset:
 
 
 # Load PLM
-plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
+tokenizer = BertTokenizer.from_pretrained("uer/chinese_roberta_L-12_H-768")
+plm = AutoModelForMaskedLM.from_pretrained("uer/chinese_roberta_L-12_H-768")
+WrapperClass = MLMTokenizerWrapper
 
 # Constructing Template
 if args.template == 0:
@@ -216,7 +221,7 @@ for epoch in range(args.epochs):
 #               Test
 # ========================================
 print("Prediction...")
-prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
+# prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
 prompt_model = prompt_model.to(device)
 prompt_model.eval()
 test_y_pred = []

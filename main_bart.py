@@ -1,6 +1,11 @@
 import torch
 import torch.nn.functional as F
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup, BertTokenizerFast, BertTokenizer, \
+    BartForConditionalGeneration, AutoModelForSeq2SeqLM, AutoTokenizer
+
+from openprompt.plms import T5LMTokenizerWrapper
+from openprompt.plms import T5TokenizerWrapper
+from openprompt.plms import LMTokenizerWrapper
 from config import set_args
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, multilabel_confusion_matrix
 from tqdm import tqdm
@@ -8,7 +13,7 @@ from openprompt.data_utils import InputExample
 from openprompt import PromptDataLoader
 from openprompt.prompts import ManualTemplate, SoftTemplate, PtuningTemplate, MixedTemplate
 from openprompt.prompts import ManualVerbalizer, SoftVerbalizer, KnowledgeableVerbalizer, AutomaticVerbalizer, \
-    GenerationVerbalizer, ProtoVerbalizer
+    GenerationVerbalizer
 from openprompt import PromptForClassification, PromptModel
 from openprompt.plms import load_plm
 from sklearn.metrics import classification_report
@@ -56,7 +61,9 @@ for data in test_dataset:
 
 
 # Load PLM
-plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
+tokenizer = AutoTokenizer.from_pretrained('plm/bart-base-chinese')
+plm = AutoModelForSeq2SeqLM.from_pretrained("plm/bart-base-chinese")
+WrapperClass = T5LMTokenizerWrapper
 
 # Constructing Template
 if args.template == 0:
@@ -64,22 +71,24 @@ if args.template == 0:
                     '這是 {"mask":None, "length":2} 的「{"placeholder":"text_b"}」'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
 elif args.template == 1:
-    template_text = "{'text': 'text_a'}{'text': 'text_b'}{'soft': '请判断这两个句子间的逻辑关系：', 'length': 10}{'mask'}"
+    template_text = '{"placeholder":"text_a","shortenable":True} ' \
+                    '這是 {"mask":None, "length":2} 的「{"placeholder":"text_b"}」'
     template = SoftTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 elif args.template == 2:
     template_text = '{"placeholder":"text_a","shortenable":True} {"soft":None, "duplicate":5} ' \
                     '{"placeholder":"text_b"} {"soft":None, "duplicate":10} {"soft":"答案:"} {"mask":None, "length":2}'
     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
 elif args.template == 4:
-    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":"這是"} {"mask":None, "length":2} ' \
-                    '{"soft":"的"} {"soft":"「"} {"placeholder":"text_b"} {"soft":"」"}'
+    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":"這是"} {"mask":None, "length":2} {"soft":"的"} ' \
+                    '{"soft":"「"} {"placeholder":"text_b"} {"soft":"」"}'
     template = MixedTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 
 # Load dataloader
 train_dataloader = PromptDataLoader(
     dataset=dataset['train'],
     template=template, tokenizer=tokenizer,
-    tokenizer_wrapper_class=WrapperClass, batch_size=args.batch_size,
+    tokenizer_wrapper_class=WrapperClass,
+    batch_size=args.batch_size,
     shuffle=True, teacher_forcing=False, predict_eos_token=False,
     truncate_method="tail", max_seq_length=args.max_length
 )
@@ -88,16 +97,20 @@ validation_dataloader = PromptDataLoader(
     dataset=dataset['validation'],
     template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass,
-    batch_size=args.batch_size, shuffle=True, teacher_forcing=False,
-    predict_eos_token=False, truncate_method="tail", max_seq_length=args.max_length
+    batch_size=args.batch_size, shuffle=True,
+    teacher_forcing=False,
+    predict_eos_token=False, truncate_method="tail",
+    max_seq_length=args.max_length
 )
 
 test_dataloader = PromptDataLoader(
     dataset=dataset['test'],
     template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass,
-    batch_size=args.batch_size, shuffle=True, teacher_forcing=False,
-    predict_eos_token=False, truncate_method="tail", max_seq_length=args.max_length
+    batch_size=args.batch_size, shuffle=True,
+    teacher_forcing=False,
+    predict_eos_token=False, truncate_method="tail",
+    max_seq_length=args.max_length
 )
 
 # Define the verbalizer
@@ -183,7 +196,6 @@ for epoch in range(args.epochs):
         torch.nn.utils.clip_grad_norm_(prompt_model.parameters(), 1.0)
         optimizer.step()
         scheduler.step()
-    print("Epoch {}, train_loss {}".format(epoch, loss), flush=True)
 
     # ========================================
     #               Validation
@@ -217,6 +229,7 @@ for epoch in range(args.epochs):
 # ========================================
 print("Prediction...")
 prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
+device = torch.device('cpu')
 prompt_model = prompt_model.to(device)
 prompt_model.eval()
 test_y_pred = []

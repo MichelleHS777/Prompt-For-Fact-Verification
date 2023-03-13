@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup, BertTokenizerFast, BertTokenizer
+from openprompt.plms import LMTokenizerWrapper
 from config import set_args
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, multilabel_confusion_matrix
 from tqdm import tqdm
@@ -8,10 +9,11 @@ from openprompt.data_utils import InputExample
 from openprompt import PromptDataLoader
 from openprompt.prompts import ManualTemplate, SoftTemplate, PtuningTemplate, MixedTemplate
 from openprompt.prompts import ManualVerbalizer, SoftVerbalizer, KnowledgeableVerbalizer, AutomaticVerbalizer, \
-    GenerationVerbalizer, ProtoVerbalizer
+    GenerationVerbalizer
 from openprompt import PromptForClassification, PromptModel
-from openprompt.plms import load_plm
 from sklearn.metrics import classification_report
+from openprompt.data_utils.data_sampler import FewShotSampler
+
 
 # Load arguments
 args = set_args()
@@ -26,6 +28,7 @@ dataset['test'] = []
 train_dataset = open(args.train_file, 'r', encoding='utf-8').readlines()
 validation_dataset = open(args.valid_file, 'r', encoding='utf-8').readlines()
 test_dataset = open(args.test_file, 'r', encoding='utf-8').readlines()
+sampler = FewShotSampler(num_examples_per_label=args.shot_num)
 
 for data in train_dataset:
     data = eval(data)
@@ -35,6 +38,7 @@ for data in train_dataset:
         label=int(data['label'])
     )
     dataset['train'].append(train_input_example)
+    dataset['train'] = sampler(dataset['train'], seed=777)
 
 for data in validation_dataset:
     data = eval(data)
@@ -56,7 +60,10 @@ for data in test_dataset:
 
 
 # Load PLM
-plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
+from transformers import AutoTokenizer, AutoModelForCausalLM
+tokenizer = BertTokenizer.from_pretrained('bert-base-chinese')
+plm = AutoModelForCausalLM.from_pretrained("plm/gpt2-base-chinese")
+WrapperClass = LMTokenizerWrapper
 
 # Constructing Template
 if args.template == 0:
@@ -64,22 +71,24 @@ if args.template == 0:
                     '這是 {"mask":None, "length":2} 的「{"placeholder":"text_b"}」'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
 elif args.template == 1:
-    template_text = "{'text': 'text_a'}{'text': 'text_b'}{'soft': '请判断这两个句子间的逻辑关系：', 'length': 10}{'mask'}"
+    template_text = '{"placeholder":"text_a","shortenable":True} ' \
+                    '這是 {"mask":None, "length":2} 的「{"placeholder":"text_b"}」'
     template = SoftTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 elif args.template == 2:
     template_text = '{"placeholder":"text_a","shortenable":True} {"soft":None, "duplicate":5} ' \
                     '{"placeholder":"text_b"} {"soft":None, "duplicate":10} {"soft":"答案:"} {"mask":None, "length":2}'
     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
 elif args.template == 4:
-    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":"這是"} {"mask":None, "length":2} ' \
-                    '{"soft":"的"} {"soft":"「"} {"placeholder":"text_b"} {"soft":"」"}'
+    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":"這是"} {"mask":None, "length":2} {"soft":"的"} ' \
+                    '{"soft":"「"} {"placeholder":"text_b"} {"soft":"」"}'
     template = MixedTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 
 # Load dataloader
 train_dataloader = PromptDataLoader(
     dataset=dataset['train'],
     template=template, tokenizer=tokenizer,
-    tokenizer_wrapper_class=WrapperClass, batch_size=args.batch_size,
+    tokenizer_wrapper_class=WrapperClass,
+    batch_size=args.batch_size,
     shuffle=True, teacher_forcing=False, predict_eos_token=False,
     truncate_method="tail", max_seq_length=args.max_length
 )
@@ -88,16 +97,20 @@ validation_dataloader = PromptDataLoader(
     dataset=dataset['validation'],
     template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass,
-    batch_size=args.batch_size, shuffle=True, teacher_forcing=False,
-    predict_eos_token=False, truncate_method="tail", max_seq_length=args.max_length
+    batch_size=args.batch_size, shuffle=True,
+    teacher_forcing=False,
+    predict_eos_token=False, truncate_method="tail",
+    max_seq_length=args.max_length
 )
 
 test_dataloader = PromptDataLoader(
     dataset=dataset['test'],
     template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass,
-    batch_size=args.batch_size, shuffle=True, teacher_forcing=False,
-    predict_eos_token=False, truncate_method="tail", max_seq_length=args.max_length
+    batch_size=args.batch_size, shuffle=True,
+    teacher_forcing=False,
+    predict_eos_token=False, truncate_method="tail",
+    max_seq_length=args.max_length
 )
 
 # Define the verbalizer
@@ -159,9 +172,8 @@ best_microf1 = 0
 best_macrof1 = 0
 best_recall = 0
 best_precision = 0
-weight = [1, 1, 4349 / 776 * 10]
-class_weight = torch.FloatTensor(weight).to(device)
-loss_func = torch.nn.CrossEntropyLoss(weight=class_weight)
+
+loss_func = torch.nn.CrossEntropyLoss()
 
 # Training
 for epoch in range(args.epochs):
@@ -183,40 +195,40 @@ for epoch in range(args.epochs):
         torch.nn.utils.clip_grad_norm_(prompt_model.parameters(), 1.0)
         optimizer.step()
         scheduler.step()
-    print("Epoch {}, train_loss {}".format(epoch, loss), flush=True)
 
     # ========================================
     #               Validation
     # ========================================
-    loss_func = torch.nn.CrossEntropyLoss()
-    prompt_model.eval()
-    valid_y_pred = []
-    valid_y_true = []
-    total_eval_loss = 0
-    pbar = tqdm(validation_dataloader, desc="Valid")
-    for step, inputs in enumerate(pbar):
-        inputs = inputs.to(device)
-        logits = prompt_model(inputs)
-        labels = inputs['label']
-        val_loss = loss_func(logits, labels)
-        total_eval_loss += val_loss.sum().item()
-        valid_y_true.extend(labels.cpu().tolist())
-        pred = F.softmax(logits, dim=-1)
-        valid_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
-    pre, recall, f1, _ = precision_recall_fscore_support(valid_y_true, valid_y_pred, average='micro')
-    microf1 = f1
-    pre, recall, f1, _ = precision_recall_fscore_support(valid_y_true, valid_y_pred, average='macro')
-    if f1 > best_macrof1:
-        best_microf1 = microf1
-        best_macrof1 = f1
-        torch.save(prompt_model.state_dict(), f"./checkpoint/model.ckpt")
-    print("Epoch {}, f1 {}".format(epoch, f1), flush=True)
+    # loss_func = torch.nn.CrossEntropyLoss()
+    # prompt_model.eval()
+    # valid_y_pred = []
+    # valid_y_true = []
+    # total_eval_loss = 0
+    # pbar = tqdm(validation_dataloader, desc="Valid")
+    # for step, inputs in enumerate(pbar):
+    #     inputs = inputs.to(device)
+    #     logits = prompt_model(inputs)
+    #     labels = inputs['label']
+    #     val_loss = loss_func(logits, labels)
+    #     total_eval_loss += val_loss.sum().item()
+    #     valid_y_true.extend(labels.cpu().tolist())
+    #     pred = F.softmax(logits, dim=-1)
+    #     valid_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
+    # pre, recall, f1, _ = precision_recall_fscore_support(valid_y_true, valid_y_pred, average='micro')
+    # microf1 = f1
+    # pre, recall, f1, _ = precision_recall_fscore_support(valid_y_true, valid_y_pred, average='macro')
+    # if f1 > best_macrof1:
+    #     best_microf1 = microf1
+    #     best_macrof1 = f1
+    #     torch.save(prompt_model.state_dict(), f"./checkpoint/model.ckpt")
+    # print("Epoch {}, f1 {}".format(epoch, f1), flush=True)
 
 # ========================================
 #               Test
 # ========================================
 print("Prediction...")
-prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
+# prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
+device = torch.device('cpu')
 prompt_model = prompt_model.to(device)
 prompt_model.eval()
 test_y_pred = []

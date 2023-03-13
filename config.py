@@ -4,7 +4,6 @@ import argparse
 def set_args():
     parser = argparse.ArgumentParser(description='Prompt Tuning For CHEF')
     parser.add_argument('--cuda', type=str, default="0", help='appoint GPU devices')
-    # parser.add_argument('--use_cuda', type=bool, default=True, help='if use GPU or not')
     parser.add_argument('--train_file', type=str, default='datasets/claim verification/train.json', help='train dataset path')
     parser.add_argument('--valid_file', type=str, default='datasets/claim verification/dev.json', help='validation dataset path')
     parser.add_argument('--test_file', type=str, default='datasets/claim verification/test.json', help='test dataset path')
@@ -16,7 +15,10 @@ def set_args():
     parser.add_argument('--initial_lr', type=float, default=5e-6, help='initial learning rate')
     parser.add_argument('--initial_eps', type=float, default=1e-8, help='initial adam_epsilon')
     parser.add_argument('--epochs', type=int, default=8, help='training epochs for labeled data')
+    parser.add_argument('--shot_num', type=int, default=0, help='few shot numbers')
+    parser.add_argument('--shot', action="store_true", help="If one-shot or few shot")
     parser.add_argument('--freeze', type=bool, default=False, help='freeze plm or not, default is False')
+    parser.add_argument('--soft_token_num', type=int, default=10, help='set the number of soft token')
     parser.add_argument('--plm_eval_mode', type=bool, default=False, help='the dropout of the model is turned off')
     parser.add_argument("--template", type=int,
                         help="Set template (0 for manual, 1 for soft, 2 for Ptuning, 3 for PrefixTuning, 4 for PTR, 5 for mix)",
