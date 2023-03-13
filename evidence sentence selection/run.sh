@@ -1,0 +1,5 @@
+#python main.py --train --eval --train_data_path="./data/ATEC/ATEC.train2.data" --dev_data_path="./data/unpreprocess/test2.json" --eval_dev_data_path="./data/CHEF/test2.data" --save_file='./result/0304/test.jsonl'
+python main.py --eval --train_data_path="./data/ATEC/ATEC.train.data" --dev_data_path="./data/unpreprocess/train.json" --eval_dev_data_path="./data/CHEF/train.data" --save_file='./result/0304/train2.jsonl' --output_dir='checkpoint/0305/train.log'
+python main.py --eval --train_data_path="./data/ATEC/ATEC.train.data" --dev_data_path="./data/unpreprocess/dev.json" --eval_dev_data_path="./data/CHEF/dev.data" --save_file='./result/0304/dev.jsonl' --output_dir='checkpoint/0305/dev.log'
+python main.py --eval --train_data_path="./data/ATEC/ATEC.train.data" --dev_data_path="./data/unpreprocess/test.json" --eval_dev_data_path="./data/CHEF/test.data" --save_file='./result/0304/test.jsonl' --output_dir='checkpoint/0305/test.log'
+#python main.py --train_data_path="./data/lcqmc/train.data" --dev_data_path="./data/unpreprocess/train.json" --eval_dev_data_path="./data/CHEF/train.data"

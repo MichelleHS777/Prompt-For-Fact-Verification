@@ -41,3 +41,5 @@ class PromptBERT(nn.Module):
         # print(input_mask_expanded.size())    # torch.Size([4, 48, 768])
         mask_embedding = torch.sum(token_embeddings * input_mask_expanded, 1)
         return mask_embedding
+
+
