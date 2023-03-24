@@ -1,2 +1,2 @@
-# Prompt-For-Fact-Verification
+# PromptChinsesFact
 This is the thesis for fact verification using prompt learning
