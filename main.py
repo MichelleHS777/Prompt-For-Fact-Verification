@@ -8,15 +8,15 @@ from openprompt.data_utils import InputExample
 from openprompt import PromptDataLoader
 from openprompt.prompts import ManualTemplate, SoftTemplate, PtuningTemplate, MixedTemplate
 from openprompt.prompts import ManualVerbalizer, SoftVerbalizer, KnowledgeableVerbalizer, AutomaticVerbalizer, \
-    GenerationVerbalizer, ProtoVerbalizer
-from openprompt import PromptForClassification, PromptModel
+    GenerationVerbalizer
+from openprompt.pipeline_base import PromptForClassification, PromptForGeneration
 from openprompt.plms import load_plm
 from sklearn.metrics import classification_report
+from random import sample
 
 # Load arguments
 args = set_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 # Load Dataset
 dataset = {}
@@ -24,13 +24,17 @@ dataset['train'] = []
 dataset['validation'] = []
 dataset['test'] = []
 train_dataset = open(args.train_file, 'r', encoding='utf-8').readlines()
+# fake_train_dataset = open(args.fake_train_file, 'r', encoding='utf-8').readlines()
+# train_dataset = train_dataset + fake_train_dataset
 validation_dataset = open(args.valid_file, 'r', encoding='utf-8').readlines()
 test_dataset = open(args.test_file, 'r', encoding='utf-8').readlines()
+
 
 for data in train_dataset:
     data = eval(data)
     train_input_example = InputExample(
         text_a=data['evidences'],
+        # text_a=''.join(data['sentence']),
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -40,6 +44,7 @@ for data in validation_dataset:
     data = eval(data)
     dev_input_example = InputExample(
         text_a=data['evidences'],
+        # text_a=''.join(data['sentence']),
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -49,30 +54,30 @@ for data in test_dataset:
     data = eval(data)
     test_input_example = InputExample(
         text_a=data['evidences'],
+        # text_a=''.join(data['sentence']),
         text_b=data['claim'],
         label=int(data['label'])
     )
     dataset['test'].append(test_input_example)
-
 
 # Load PLM
 plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
 
 # Constructing Template
 if args.template == 0:
-    template_text = '{"placeholder":"text_a","shortenable":True} ' \
-                    '這是 {"mask":None, "length":2} 的「{"placeholder":"text_b"}」'
+    template_text = '{"placeholder":"text_a","shortenable":True}' \
+                    '這是 {"mask":None, "length":2} 「{"placeholder":"text_b"}」'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
-elif args.template == 1:
-    template_text = "{'text': 'text_a'}{'text': 'text_b'}{'soft': '请判断这两个句子间的逻辑关系：', 'length': 10}{'mask'}"
-    template = SoftTemplate(model=plm, tokenizer=tokenizer, text=template_text)
+# elif args.template == 1:
+#     template_text = "{'text': 'text_a'}{'text': 'text_b'}{'soft': '请判断这两个句子间的逻辑关系：', 'length': 10}{'mask'}"
+#     template = SoftTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 elif args.template == 2:
-    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":None, "duplicate":5} ' \
-                    '{"placeholder":"text_b"} {"soft":None, "duplicate":10} {"soft":"答案:"} {"mask":None, "length":2}'
+    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":None, "duplicate":5}' \
+                    '這是 {"mask":None, "length":2} 「{"placeholder":"text_b"}」'
     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
-elif args.template == 4:
+elif args.template == 3:
     template_text = '{"placeholder":"text_a","shortenable":True} {"soft":"這是"} {"mask":None, "length":2} ' \
-                    '{"soft":"的"} {"soft":"「"} {"placeholder":"text_b"} {"soft":"」"}'
+                    '「 {"placeholder":"text_b"} 」}'
     template = MixedTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 
 # Load dataloader
@@ -105,7 +110,7 @@ if args.verbalizer == 0:
     verbalizer = ManualVerbalizer(
         classes=[0, 1, 2],
         num_classes=3,
-        label_words={0: ["正確"], 1: ["錯誤"], 2: ["未知"]},
+        label_words={0: ["正确"], 1: ["错误"], 2: ["未知"]},
         tokenizer=tokenizer
     )
 elif args.verbalizer == 1:
@@ -113,34 +118,38 @@ elif args.verbalizer == 1:
         tokenizer=tokenizer,
         model=plm,
         num_classes=3,
+        label_words=[["正确"], ["错误"], ["未知"]]
     )
-elif args.verbalizer == 2:  # TODO:Add knowledge verbalizer txt ref:Calibration
-    verbalizer = KnowledgeableVerbalizer(tokenizer, plm, num_classes=3)
+elif args.verbalizer == 2:
+    verbalizer = AutomaticVerbalizer(
+        tokenizer,
+        num_classes=3,
+    )
 elif args.verbalizer == 3:
-    verbalizer = AutomaticVerbalizer(tokenizer, num_classes=3)
-elif args.verbalizer == 4:
     verbalizer = GenerationVerbalizer(
         tokenizer,
-        label_words={0: ["正確"], 1: ["錯誤"], 2: ["未知"]},
+        label_words={0: ["正确"], 1: ["错误"], 2: ["未知"]},
+        classes=[0, 1, 2],
         is_rule=False
     )
-
 # Load prompt model
-if args.template == 0 or 1 or 5:
+if args.template == 0 or 3:
     prompt_model = PromptForClassification(
         plm=plm,
         template=template,
         verbalizer=verbalizer,
+        freeze_plm=args.freeze
     )
 
-elif args.template == 2 or 3:
-    prompt_model = PromptModel(
+else:
+    prompt_model = PromptForGeneration(
         plm=plm,
         tokenizer=tokenizer,
         template=template,
         freeze_plm=args.freeze,
         plm_eval_mode=args.plm_eval_mode
     )
+
 prompt_model = prompt_model.to(device)
 
 # Now the training is standard
@@ -152,6 +161,16 @@ scheduler = get_linear_schedule_with_warmup(
     num_training_steps=total_steps
 )
 
+
+def get_each_label():
+    train_label = {0: 0, 1: 0, 2: 0}
+    for train in train_dataset:
+        train = eval(train)
+        train_label[train['label']] += 1
+    return train_label[0], train_label[1], train_label[2]
+
+
+sup, ref, nei = get_each_label()
 tot_loss = 0
 log_loss = 0
 best_val_acc = 0
@@ -159,9 +178,10 @@ best_microf1 = 0
 best_macrof1 = 0
 best_recall = 0
 best_precision = 0
-weight = [1, 1, 4349 / 776 * 10]
+weight = [1, 1, ref/nei*10]
 class_weight = torch.FloatTensor(weight).to(device)
 loss_func = torch.nn.CrossEntropyLoss(weight=class_weight)
+# loss_func = torch.nn.CrossEntropyLoss()
 
 # Training
 for epoch in range(args.epochs):
@@ -183,7 +203,7 @@ for epoch in range(args.epochs):
         torch.nn.utils.clip_grad_norm_(prompt_model.parameters(), 1.0)
         optimizer.step()
         scheduler.step()
-    print("Epoch {}, train_loss {}".format(epoch, loss), flush=True)
+    print("Epoch {}, train_loss {}".format(epoch, tot_loss / len(train_dataloader)), flush=True)
 
     # ========================================
     #               Validation
@@ -210,12 +230,14 @@ for epoch in range(args.epochs):
         best_microf1 = microf1
         best_macrof1 = f1
         torch.save(prompt_model.state_dict(), f"./checkpoint/model.ckpt")
+    print("Epoch {}, valid_loss {}".format(epoch, total_eval_loss / len(validation_dataloader)), flush=True)
     print("Epoch {}, f1 {}".format(epoch, f1), flush=True)
 
 # ========================================
 #               Test
 # ========================================
 print("Prediction...")
+# device = torch.device('cuda')
 prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
 prompt_model = prompt_model.to(device)
 prompt_model.eval()
