@@ -1,20 +1,22 @@
-def convert_json_to_data(original_file, save_file):
-    for data in original_file:
-        data = eval(data)
-        for sentence in data['evidence']:
-            save_file.write(data['claim']+"\t"+sentence+"\t"+str(data['label'])+'\n')
-    save_file.close()
+from tqdm import tqdm
+import re
+import json
 
-print('preprocess...')
-train_dataset = open('datasets/evidence extraction/train.json', 'r', encoding='utf-8').readlines()
-save_file = open('datasets/train.data', 'w', encoding='utf-8')
-convert_json_to_data(train_dataset, save_file)
+dataset = json.load(open('./datasets/unpreprocess/dev.json', 'r', encoding='utf-8'))
+save_file = open('./datasets/evidence_splitGold/dev.json', 'w', encoding='utf-8')
 
-dev_dataset = open('datasets/evidence extraction/dev.json', 'r', encoding='utf-8').readlines()
-save_file = open('datasets/dev.data', 'w', encoding='utf-8')
-convert_json_to_data(dev_dataset, save_file)
 
-test_dataset = open('datasets/evidence extraction/test.json', 'r', encoding='utf-8').readlines()
-save_file = open('datasets/test.data', 'w', encoding='utf-8')
-convert_json_to_data(test_dataset, save_file)
-print('finish...')
+for data in tqdm(dataset, desc='Preprocess...'):
+    claimId = data['claimId']
+    claim = data['claim']
+    label = data['label']
+    evidence_doc = [data['evidence'][str(i)]['text'] for i in range(5)]
+    gold_evidence = [data['gold evidence'][str(i)]['text'] for i in range(5)]
+    for evidence_text in evidence_doc:
+        for gold_evidence_text in gold_evidence:
+            evidence_text = evidence_text.replace(gold_evidence_text, '')
+        evidence_text = re.split(r'[？：。！（）.“”…\t\n]', evidence_text)
+        evidence_text = [evidence for evidence in evidence_text if len(evidence)>5]
+        data = json.dumps({'claimId': int(claimId), 'claim': claim, 'evidences': evidence_text + gold_evidence, 'label': label}, ensure_ascii=False)
+    save_file.write(data + "\n")
+save_file.close()

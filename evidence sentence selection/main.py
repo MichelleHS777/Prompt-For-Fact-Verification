@@ -6,35 +6,39 @@ from model import PromptBERT
 from config import set_args
 from transformers.models.bert import BertTokenizer
 from torch.utils.data import DataLoader, RandomSampler
-# from model import PromptBERT
-from utils import l2_normalize, compute_corrcoef, compute_pearsonr
+from collections import OrderedDict
 from transformers import AdamW, get_linear_schedule_with_warmup
 from data_helper import load_data, SentDataSet, collate_func, convert_token_id
 import json
 import re
 
 device = torch.device("cuda")
-max_length = 256
+max_length = 512
 args = set_args()
+dataset = open('datasets/evidence_splitGold/test2.json', 'r', encoding='utf-8')
+save = open('datasets/evidence_splitGold/prompt_test2.json', 'a+', encoding='utf-8')
 
-save_file = open(args.save_file, 'a+', encoding='utf-8')
 
 def get_similar_sentence():
+    model.load_state_dict(torch.load(f"./checkpoint/CHEF_train.ckpt"))
     model.eval()
-    test_file = open(args.dev_data_path, 'r', encoding='utf-8').readlines()
-    for row in tqdm(test_file, desc='Getting similar sentences'):
-        row = eval(row)
-        claimID = row['claimId']
-        claim = row['claim']
-        ev_sent = row['evidence']
-        sentence_score = cosSimilarity(claim, ev_sent, model, tokenizer)
-        if sentence_score > 0.8:
-            label = 1
-            data = json.dumps({'claimId':claimID, 'claim':claim, 'sentence':ev_sent, 'label':label}, ensure_ascii=False)
-        else:
-            label = 0
-            data = json.dumps({'claimId':claimID, 'claim':claim, 'sentence':"", 'label':label}, ensure_ascii=False)
-        save_file.write(data + "\n")
+    sent2sim = {}
+    for data in dataset:
+        data = eval(data)
+        claimId = data['claimId']
+        claim = data['claim']
+        evidences = data['evidences']
+        label = data['label']
+        for ev_sent in evidences:
+            if ev_sent in sent2sim:
+                continue
+            sent2sim[ev_sent] = cosSimilarity(claim, ev_sent, model, tokenizer)
+        sent2sim = list(sent2sim.items())
+        sent2sim.sort(key=lambda s: s[1], reverse=True)
+        ev_sent = [s[0] for s in sent2sim[:5] if s[1] > 0.8]
+        data = json.dumps({'claimId': claimId, 'claim': claim, 'evidence': ev_sent, 'label': label}, ensure_ascii=False)
+        save.write(data + "\n")
+    save.close()
 
 def cosSimilarity(sent1, sent2, model, tokenizer):
     model.eval()
@@ -67,51 +71,6 @@ def cosSimilarity(sent1, sent2, model, tokenizer):
     return cos_sim.item()
 
 
-# def evaluate():
-#     model.eval()
-#     all_a_vecs = []
-#     all_b_vecs = []
-#     all_label = []
-#     with open(args.eval_dev_data_path, 'r', encoding='utf8') as f:
-#         for line in tqdm(f.readlines(), desc='Predict'):
-#             sent1, sent2, label = line.strip().split('\t')
-#             all_label.append(int(label))
-#             s1_input_id, s1_mask, s1_segment_id, s1_t_input_id, s1_t_mask, s1_t_segment_id = convert_token_id(sent1,
-#                                                                                                               tokenizer)
-#             s2_input_id, s2_mask, s2_segment_id, s2_t_input_id, s2_t_mask, s2_t_segment_id = convert_token_id(sent2,
-#                                                                                                               tokenizer)
-#             if torch.cuda.is_available():
-#                 s1_input_id, s1_mask, s1_segment_id, s1_t_input_id, s1_t_mask, s1_t_segment_id = s1_input_id.cuda(), s1_mask.cuda(), s1_segment_id.cuda(), s1_t_input_id.cuda(), s1_t_mask.cuda(), s1_t_segment_id.cuda()
-#                 s2_input_id, s2_mask, s2_segment_id, s2_t_input_id, s2_t_mask, s2_t_segment_id = s2_input_id.cuda(), s2_mask.cuda(), s2_segment_id.cuda(), s2_t_input_id.cuda(), s2_t_mask.cuda(), s2_t_segment_id.cuda()
-#
-#             with torch.no_grad():
-#                 s1_embedding = model(prompt_input_ids=s1_input_id,
-#                                      prompt_attention_mask=s1_mask,
-#                                      prompt_token_type_ids=s1_segment_id,
-#                                      template_input_ids=s1_t_input_id,
-#                                      template_attention_mask=s1_t_mask,
-#                                      template_token_type_ids=s1_t_segment_id)
-#
-#                 s2_embedding = model(prompt_input_ids=s2_input_id,
-#                                      prompt_attention_mask=s2_mask,
-#                                      prompt_token_type_ids=s2_segment_id,
-#                                      template_input_ids=s2_t_input_id,
-#                                      template_attention_mask=s2_t_mask,
-#                                      template_token_type_ids=s2_t_segment_id)
-#
-#             all_a_vecs.append(s1_embedding[0].cpu().numpy())
-#             all_b_vecs.append(s2_embedding[0].cpu().numpy())
-#     all_a_vecs = np.array(all_a_vecs)
-#     all_b_vecs = np.array(all_b_vecs)
-#     all_labels = np.array(all_label)
-#
-#     a_vecs = l2_normalize(all_a_vecs)
-#     b_vecs = l2_normalize(all_b_vecs)
-#     sims = (a_vecs * b_vecs).sum(axis=1)
-#     corrcoef = compute_corrcoef(all_labels, sims)
-#     pearsonr = compute_pearsonr(all_labels, sims)
-#     return corrcoef, pearsonr
-
 def calc_loss(embed1, embed2, temperature=0.05):
     # 这里归一化是为了后面计算cos方便
     embed1 = torch.div(embed1, torch.norm(embed1, dim=1).reshape(-1, 1))
@@ -133,7 +92,6 @@ def calc_loss(embed1, embed2, temperature=0.05):
 
 
 if __name__ == '__main__':
-    args = set_args()
     tokenizer = BertTokenizer.from_pretrained(args.bert_pretrain_path)
     # 加入一个特殊token: [X]
     tokenizer.add_special_tokens({'additional_special_tokens': ['[X]']})
@@ -165,10 +123,12 @@ if __name__ == '__main__':
     warmup_steps = 0.05 * num_train_steps
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=1e-8)
     scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=warmup_steps, num_training_steps=num_train_steps)
+        optimizer, num_warmup_steps=warmup_steps,
+        num_training_steps=num_train_steps)
     model.bert.resize_token_embeddings(len(tokenizer))
+
+    # Training
     if args.train:
-        # Training
         for epoch in range(args.num_train_epochs):
             model.train()
             for step, batch in enumerate(tqdm(train_dataloader, desc="Train")):
@@ -207,5 +167,7 @@ if __name__ == '__main__':
         model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
         torch.save(model_to_save.state_dict(), f'./checkpoint/CHEF_train.ckpt')
 
-    # Get similar sentence
-    get_similar_sentence()
+    # Evaluate
+    if args.eval:
+        # Get similar sentence
+        get_similar_sentence()
