@@ -1,7 +1,6 @@
 import torch
 import torch.nn.functional as F
 from transformers import AdamW, get_linear_schedule_with_warmup, BertTokenizer
-from openprompt.plms import LMTokenizerWrapper
 from config import set_args
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, multilabel_confusion_matrix
 from tqdm import tqdm
@@ -10,9 +9,9 @@ from openprompt import PromptDataLoader
 from openprompt.prompts import ManualTemplate
 from openprompt.prompts import ManualVerbalizer
 from openprompt import PromptForClassification
-from sklearn.metrics import classification_report
 from openprompt.data_utils.data_sampler import FewShotSampler
 from transformers import AutoModelForCausalLM
+from openprompt.plms import LMTokenizerWrapper
 
 
 # Load arguments
@@ -33,7 +32,7 @@ test_dataset = open('datasets/claim verification/test.json', 'r', encoding='utf-
 for data in train_dataset:
     data = eval(data)
     train_input_example = InputExample(
-        text_a=data['evidences'],
+        text_a=data['evidencess'],
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -43,7 +42,7 @@ for data in train_dataset:
 for data in test_dataset:
     data = eval(data)
     test_input_example = InputExample(
-        text_a=data['evidences'],
+        text_a=data['evidencess'],
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -159,9 +158,9 @@ for step, inputs in enumerate(pbar):
     pred = F.softmax(logits, dim=-1)
     test_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
 
-pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='macro')
+pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='macro', zero_division=0)
 print("Precision (macro): {:.2%}".format(pre))
 print("   Recall (macro): {:.2%}".format(recall))
 print("       F1 (macro): {:.2%}".format(f1))
-pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='micro')
+pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='micro', zero_division=0)
 print("       F1 (micro): {:.2%}".format(f1))

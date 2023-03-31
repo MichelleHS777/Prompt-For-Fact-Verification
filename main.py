@@ -1,18 +1,19 @@
 import torch
 import torch.nn.functional as F
-from transformers import AdamW, get_linear_schedule_with_warmup
 from config import set_args
 from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, multilabel_confusion_matrix
 from tqdm import tqdm
 from openprompt.data_utils import InputExample
 from openprompt import PromptDataLoader
-from openprompt.prompts import ManualTemplate, SoftTemplate, PtuningTemplate, MixedTemplate
-from openprompt.prompts import ManualVerbalizer, SoftVerbalizer, KnowledgeableVerbalizer, AutomaticVerbalizer, \
+from openprompt.prompts import ManualTemplate, PtuningTemplate, MixedTemplate
+from openprompt.prompts import ManualVerbalizer, SoftVerbalizer, AutomaticVerbalizer, \
     GenerationVerbalizer
 from openprompt.pipeline_base import PromptForClassification, PromptForGeneration
 from openprompt.plms import load_plm
 from sklearn.metrics import classification_report
-from random import sample
+from transformers import AdamW, get_linear_schedule_with_warmup, AutoModelForMaskedLM, BertTokenizer, AutoModelForCausalLM
+from openprompt.plms import MLMTokenizerWrapper, LMTokenizerWrapper
+
 
 # Load arguments
 args = set_args()
@@ -33,8 +34,7 @@ test_dataset = open(args.test_file, 'r', encoding='utf-8').readlines()
 for data in train_dataset:
     data = eval(data)
     train_input_example = InputExample(
-        text_a=data['evidences'],
-        # text_a=''.join(data['sentence']),
+        text_a=data['evidencess'],
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -43,8 +43,7 @@ for data in train_dataset:
 for data in validation_dataset:
     data = eval(data)
     dev_input_example = InputExample(
-        text_a=data['evidences'],
-        # text_a=''.join(data['sentence']),
+        text_a=data['evidencess'],
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -53,26 +52,30 @@ for data in validation_dataset:
 for data in test_dataset:
     data = eval(data)
     test_input_example = InputExample(
-        text_a=data['evidences'],
-        # text_a=''.join(data['sentence']),
+        text_a=data['evidencess'],
         text_b=data['claim'],
         label=int(data['label'])
     )
     dataset['test'].append(test_input_example)
 
 # Load PLM
-plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
+if args.plm == 'bert':
+    print('model:bert')
+    plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
+if args.plm == 'roberta':
+    print('model:roberta')
+    tokenizer = BertTokenizer.from_pretrained("uer/chinese_roberta_L-12_H-768")
+    plm = AutoModelForMaskedLM.from_pretrained("uer/chinese_roberta_L-12_H-768")
+    WrapperClass = MLMTokenizerWrapper
+
 
 # Constructing Template
 if args.template == 0:
     template_text = '{"placeholder":"text_a","shortenable":True}' \
                     '這是 {"mask":None, "length":2} 「{"placeholder":"text_b"}」'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
-# elif args.template == 1:
-#     template_text = "{'text': 'text_a'}{'text': 'text_b'}{'soft': '请判断这两个句子间的逻辑关系：', 'length': 10}{'mask'}"
-#     template = SoftTemplate(model=plm, tokenizer=tokenizer, text=template_text)
 elif args.template == 2:
-    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":None, "duplicate":5}' \
+    template_text = '{"placeholder":"text_a","shortenable":True} {"soft":None, "duplicate":10}' \
                     '這是 {"mask":None, "length":2} 「{"placeholder":"text_b"}」'
     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
 elif args.template == 3:
@@ -181,7 +184,6 @@ best_precision = 0
 weight = [1, 1, ref/nei*10]
 class_weight = torch.FloatTensor(weight).to(device)
 loss_func = torch.nn.CrossEntropyLoss(weight=class_weight)
-# loss_func = torch.nn.CrossEntropyLoss()
 
 # Training
 for epoch in range(args.epochs):
@@ -237,7 +239,6 @@ for epoch in range(args.epochs):
 #               Test
 # ========================================
 print("Prediction...")
-# device = torch.device('cuda')
 prompt_model.load_state_dict(torch.load(f"./checkpoint/model.ckpt"))
 prompt_model = prompt_model.to(device)
 prompt_model.eval()

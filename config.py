@@ -8,7 +8,7 @@ def set_args():
     parser.add_argument('--fake_train_file', type=str, default='datasets/claim verification/fake.json', help='fake nei dataset for training')
     parser.add_argument('--valid_file', type=str, default='datasets/claim verification/dev.json', help='validation dataset path')
     parser.add_argument('--test_file', type=str, default='datasets/claim verification/test.json', help='test dataset path')
-    parser.add_argument('--plm', type=str, default='bert', help='bert, roberta, gpt')
+    parser.add_argument('--plm', type=str, default='bert', help='bert, roberta, gpt2')
     parser.add_argument('--num_labels', type=int, default=3, help='num labels of the dataset')
     parser.add_argument('--max_length', type=int, default=512,
                         help='max token length of the sentence for bert tokenizer')
@@ -18,7 +18,7 @@ def set_args():
     parser.add_argument('--epochs', type=int, default=8, help='training epochs for labeled data')
     parser.add_argument('--patience', type=int, default=3, help="Early stopping")
     parser.add_argument('--shot_num', type=int, default=1, help='few shot numbers')
-    parser.add_argument('--shot', action="store_true", help="If one-shot or few shot")
+    parser.add_argument('--shot', action="store_true", help="Do one-shot or few shot")
     parser.add_argument('--freeze', type=bool, default=False, help='freeze plm or not, default is False')
     parser.add_argument('--soft_token_num', type=int, default=10, help='set the number of soft token')
     parser.add_argument('--plm_eval_mode', type=bool, default=False, help='the dropout of the model is turned off')
@@ -27,4 +27,5 @@ def set_args():
                         default=0)
     parser.add_argument("--verbalizer", type=int,
                         help="Set template (0 for manual, 1 for soft, 2 for knowledge)", default=0)
+    parser.add_argument("--init_from_vocab", action="store_false")
     return parser.parse_args()

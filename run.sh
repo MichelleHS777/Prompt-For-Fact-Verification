@@ -1,15 +1,15 @@
 # ========================================
 #               BERT
 # ========================================
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/train.json' --valid_file='datasets/evidence selection/dev.json' --test_file='datasets/evidence selection/test.json' > ./results/manualTemplate_manualVerbalizer1.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/train.json' --valid_file='datasets/evidence selection/dev.json' --test_file='datasets/evidence selection/test.json' > ./results/manualTemplate_manualVerbalizer2.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/train.json' --valid_file='datasets/evidence selection/dev.json' --test_file='datasets/evidence selection/test.json' > ./results/manualTemplate_manualVerbalizer3.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/train.json' --valid_file='datasets/evidence selection/dev.json' --test_file='datasets/evidence selection/test.json' > ./results/manualTemplate_manualVerbalizer4.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/train.json' --valid_file='datasets/evidence selection/dev.json' --test_file='datasets/evidence selection/test.json' > ./results/manualTemplate_manualVerbalizer5.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer1.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer2.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer3.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer4.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer5.log
 
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/tfidf_train.json' --valid_file='datasets/evidence selection/tfidf_dev.json' --test_file='datasets/evidence selection/tfidf_test.json' > ./results/230321/evidence/tfidf_manualTemplate_manualVerbalizer1.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/semantic_train.json' --valid_file='datasets/evidence selection/semantic_dev.json' --test_file='datasets/evidence selection/semantic_test.json' > ./results/230321/evidence/semantic_manualTemplate_manualVerbalizer1.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidence selection/prompt_train.json' --valid_file='datasets/evidence selection/prompt_dev.json' --test_file='datasets/evidence selection/prompt_test.json' > ./results/230321/evidence/prompt_manualTemplate_manualVerbalizer1.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/tfidf_train.json' --valid_file='datasets/evidences selection/tfidf_dev.json' --test_file='datasets/evidences selection/tfidf_test.json' > ./results/230321/evidences/tfidf_manualTemplate_manualVerbalizer1.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/semantic_train.json' --valid_file='datasets/evidences selection/semantic_dev.json' --test_file='datasets/evidences selection/semantic_test.json' > ./results/230321/evidences/semantic_manualTemplate_manualVerbalizer1.log
+#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/prompt_train.json' --valid_file='datasets/evidences selection/prompt_dev.json' --test_file='datasets/evidences selection/prompt_test.json' > ./results/230321/evidences/prompt_manualTemplate_manualVerbalizer1.log
 
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_nei.json'  > ./results/manualTemplate_manualVerbalizer1.log
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_nei.json' > ./results/manualTemplate_manualVerbalizer2.log
@@ -18,7 +18,7 @@
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_nei.json' > ./results/manualTemplate_manualVerbalizer5.log
 
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_3224.json'  > ./results/manualTemplate_manualVerbalizer11.log
-#python3 main.py --template=0 --verbalizer=0 --fake_tr  ain_file='datasets/claim verification/train_fake_noEvidence_3224.json'  > ./results/manualTemplate_manualVerbalizer12.log
+#python3 main.py --template=0 --verbalizer=0 --fake_tr  ain_file='datasets/claim verification/train_fake_noevidences_3224.json'  > ./results/manualTemplate_manualVerbalizer12.log
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_0.8E_0.2NE_3224.json'  > ./results/manualTemplate_manualVerbalizer13.log
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_E_1220.json'  > ./results/E_1220.log
 #python3 main.py --template=0 --verbalizer=0 --fake_train_file='datasets/claim verification/train_fake_NE_4000.json'  > ./results/NE_4000.log
@@ -44,11 +44,17 @@
 #python3 main.py --template=5 --verbalizer=1  > ./results/mixTemplate_softVerbalizer4.log
 #python3 main.py --template=5 --verbalizer=1  > ./results/mixTemplate_softVerbalizer5.log
 
-python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning1.log
-python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning2.log
-python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning3.log
-python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning4.log
-python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning5.log
+#python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning1.log
+#python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning2.log
+#python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning3.log
+#python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning4.log
+#python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning5.log
+
+python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning1.log
+python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning2.log
+python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning3.log
+python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning4.log
+python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning5.log
 
 # ========================================
 #               GPT-2
