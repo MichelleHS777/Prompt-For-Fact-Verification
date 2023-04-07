@@ -4,10 +4,10 @@ import argparse
 def set_args():
     parser = argparse.ArgumentParser(description='Prompt Tuning For CHEF')
     parser.add_argument('--cuda', type=str, default="0", help='appoint GPU devices')
-    parser.add_argument('--train_file', type=str, default='datasets/claim verification/train.json', help='train dataset path')
-    parser.add_argument('--fake_train_file', type=str, default='datasets/claim verification/fake.json', help='fake nei dataset for training')
-    parser.add_argument('--valid_file', type=str, default='datasets/claim verification/dev.json', help='validation dataset path')
-    parser.add_argument('--test_file', type=str, default='datasets/claim verification/test.json', help='test dataset path')
+    parser.add_argument('--train_file', type=str, default='datasets/preprocessed/train.json', help='train dataset path')
+    parser.add_argument('--fake_train_file', type=str, default='datasets/preprocessed/fake.json', help='fake nei dataset for training')
+    parser.add_argument('--valid_file', type=str, default='datasets/preprocessed/dev.json', help='validation dataset path')
+    parser.add_argument('--test_file', type=str, default='datasets/preprocessed/test.json', help='test dataset path')
     parser.add_argument('--plm', type=str, default='bert', help='bert, roberta, gpt2')
     parser.add_argument('--num_labels', type=int, default=3, help='num labels of the dataset')
     parser.add_argument('--max_length', type=int, default=512,

@@ -34,7 +34,8 @@ test_dataset = open(args.test_file, 'r', encoding='utf-8').readlines()
 for data in train_dataset:
     data = eval(data)
     train_input_example = InputExample(
-        text_a=data['evidencess'],
+        text_a='[SEP]'.join(data['evidences']),
+        # text_a=data['evidences'],
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -43,7 +44,8 @@ for data in train_dataset:
 for data in validation_dataset:
     data = eval(data)
     dev_input_example = InputExample(
-        text_a=data['evidencess'],
+        # text_a=data['evidences'],
+        text_a='[SEP]'.join(data['evidences']),
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -52,7 +54,8 @@ for data in validation_dataset:
 for data in test_dataset:
     data = eval(data)
     test_input_example = InputExample(
-        text_a=data['evidencess'],
+        # text_a=data['evidences'],
+        text_a='[SEP]'.join(data['evidences']),
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -60,10 +63,8 @@ for data in test_dataset:
 
 # Load PLM
 if args.plm == 'bert':
-    print('model:bert')
     plm, tokenizer, model_config, WrapperClass = load_plm("bert", "bert-base-chinese")
 if args.plm == 'roberta':
-    print('model:roberta')
     tokenizer = BertTokenizer.from_pretrained("uer/chinese_roberta_L-12_H-768")
     plm = AutoModelForMaskedLM.from_pretrained("uer/chinese_roberta_L-12_H-768")
     WrapperClass = MLMTokenizerWrapper
@@ -254,7 +255,6 @@ for step, inputs in enumerate(pbar):
     test_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
 pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='micro')
 print("       F1 (micro): {:.2%}".format(f1))
-microf1 = f1
 pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='macro')
 print("Precision (macro): {:.2%}".format(pre))
 print("   Recall (macro): {:.2%}".format(recall))

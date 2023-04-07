@@ -1,8 +1,9 @@
 # ========================================
 #               BERT
 # ========================================
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer1.log
-#python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer2.log
+#python3 main.py --template=0 --verbalizer=0 --plm='bert' --train_file='../Evidence Extraction/datasets/evidence/promptbert/prompt_train.json' --valid_file='../Evidence Extraction/datasets/evidence/promptbert/prompt_dev.json' --test_file='../Evidence Extraction/datasets/evidence/promptbert/prompt_test.json' > ./results/230405/evidence/prompt/prompt_manualTemplate_manualVerbalizer1.log
+#python3 main.py --template=0 --verbalizer=0 --plm='bert' --train_file='../Evidence Extraction/datasets/evidence/semantic/semantic_train.json' --valid_file='../Evidence Extraction/datasets/evidence/semantic/semantic_dev.json' --test_file='../Evidence Extraction/datasets/evidence/semantic/semantic_test.json' > ./results/230405/evidence/semantic/semantic_manualTemplate_manualVerbalizer1.log
+python3 main.py --template=0 --verbalizer=0 --plm='bert' --train_file='../Evidence Extraction/datasets/evidence/promptbert/prompt_train2.json' --valid_file='../Evidence Extraction/datasets/evidence/promptbert/prompt_dev2.json' --test_file='../Evidence Extraction/datasets/evidence/promptbert/prompt_test2.json' > ./results/230405/evidence/prompt/prompt_SEP_manualTemplate_manualVerbalizer1.log
 #python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer3.log
 #python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer4.log
 #python3 main.py --template=0 --verbalizer=0 --train_file='datasets/evidences selection/train.json' --valid_file='datasets/evidences selection/dev.json' --test_file='datasets/evidences selection/test.json' > ./results/manualTemplate_manualVerbalizer5.log
@@ -50,11 +51,11 @@
 #python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning4.log
 #python3 main.py --template=2  --freeze=False > ./results/230329/P-tuning/P-Tuning5.log
 
-python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning1.log
-python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning2.log
-python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning3.log
-python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning4.log
-python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning5.log
+#python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning1.log
+#python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning2.log
+#python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning3.log
+#python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning4.log
+#python3 main.py --template=2  --freeze=False --plm='roberta' > ./results/230405/P-tuning/RoBERTa/template2/RoBERTa_P-Tuning5.log
 
 # ========================================
 #               GPT-2
