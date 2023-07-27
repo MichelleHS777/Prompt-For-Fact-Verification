@@ -4,8 +4,6 @@ We survey the prompt tuning and parameter efficient fine-tuning methods to imple
 We use Automatic Prompt Engineer to generate the prompts
 ## Claim Verification  
 * P-Tuning   
-* P-Tuning v2  
-* LORA  
 ## Basic Usage
 python main.py --train --eval  
 
