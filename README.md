@@ -5,7 +5,7 @@ We use Automatic Prompt Engineer to generate the prompts
 ## Claim Verification  
 * P-Tuning   
 ## Basic Usage
-python main.py 
+    python main.py 
 
 ## Parameters
 `--train_file` default='datasets/preprocessed/train.json'
