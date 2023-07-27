@@ -100,10 +100,6 @@ elif args.plm == 'ernie-large':
     WrapperClass = MLMTokenizerWrapper
 elif args.plm == 't5':
     plm, tokenizer, model_config, WrapperClass = load_plm("t5", "ClueAI/PromptCLUE-base-v1-5")  # yechen/bert-large-chinese
-    # tokenizer = AutoTokenizer.from_pretrained("ClueAI/PromptCLUE-base-v1-5")
-    # plm = AutoModelForSeq2SeqLM.from_pretrained("ClueAI/PromptCLUE-base-v1-5")
-    # WrapperClass = T5TokenizerWrapper
-    # plm.resize_token_embeddings(len(tokenizer))
 
 # Constructing Template
 if args.template == 0:
