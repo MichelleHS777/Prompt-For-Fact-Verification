@@ -12,5 +12,5 @@ python main.py --train --eval
 `--valid_file` default='datasets/preprocessed/dev.json'  
 `--test_file` default='datasets/preprocessed/test.json'  
 `--plm` default='bert'  
-`--template` default=0 (0: manual, 1: Ptuning (soft APE), 2: Ptuning (soft: 10 + APE), 3: PTuning (soft: 10) )
+`--template` default=0 (0: manual, 1: Ptuning (soft APE), 2: Ptuning (soft: 10 + APE), 3: PTuning (soft: 10) )  
 `--verbalizer` default=0 (manual verbalizer)
