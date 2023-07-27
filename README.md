@@ -1,6 +1,6 @@
 # The Study of Prompt Based Learning for Chinese Fact Checking
-Claim Verification: We survey the prompt tuning and parameter efficient fine-tuning methods to implement on chinese fact checking  
-Template Engineering: We generate the prompt by APE
+* Claim Verification: We survey the prompt tuning and parameter efficient fine-tuning methods to implement on chinese fact checking  
+* Template Engineering: We generate the prompt by APE
 ## How do we find proper prompt?
 We use Automatic Prompt Engineer to generate the prompts
 ## Claim Verification  
@@ -9,7 +9,7 @@ We use Automatic Prompt Engineer to generate the prompts
     python main.py 
 
 ## Parameters
-`--train_file` default='datasets/preprocessed/train.json'
+`--train_file` default='datasets/preprocessed/train.json'  
 `--valid_file` default='datasets/preprocessed/dev.json'  
 `--test_file` default='datasets/preprocessed/test.json'  
 `--plm` default='bert'  
