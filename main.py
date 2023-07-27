@@ -15,7 +15,7 @@ from sklearn.metrics import classification_report
 from transformers import AdamW, get_linear_schedule_with_warmup, AutoModelForMaskedLM, BertTokenizer, \
     AutoModelForCausalLM, ErnieForMaskedLM, AutoTokenizer, T5ForConditionalGeneration, AutoModel, AutoModelForSeq2SeqLM
 from openprompt.plms import MLMTokenizerWrapper, T5TokenizerWrapper
-from pytorchtools import EarlyStopping
+# from pytorchtools import EarlyStopping
 
 
 # Load arguments
