@@ -1,4 +1,5 @@
 import json
+import os
 import torch
 import torch.nn.functional as F
 from config import set_args
@@ -12,8 +13,9 @@ from openprompt.pipeline_base import PromptForClassification, PromptForGeneratio
 from openprompt.plms import load_plm
 from sklearn.metrics import classification_report
 from transformers import AdamW, get_linear_schedule_with_warmup, AutoModelForMaskedLM, BertTokenizer, \
-    AutoModelForCausalLM, ErnieForMaskedLM
-from openprompt.plms import MLMTokenizerWrapper
+    AutoModelForCausalLM, ErnieForMaskedLM, AutoTokenizer, T5ForConditionalGeneration, AutoModel, AutoModelForSeq2SeqLM
+from openprompt.plms import MLMTokenizerWrapper, T5TokenizerWrapper
+from pytorchtools import EarlyStopping
 
 
 # Load arguments
@@ -21,40 +23,59 @@ args = set_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
+
+def get_parameters(model):
+    # 計算模型的訓練參數量
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return total_params, trainable_params
+
 # Load Dataset
+train_dataset = open(args.train_file, 'r', encoding='utf-8').readlines()
+if args.data_aug:
+    fake_train_dataset = open(args.fake_train_file, 'r', encoding='utf-8').readlines()
+    train_dataset = train_dataset + fake_train_dataset
+validation_dataset = open(args.valid_file, 'r', encoding='utf-8').readlines()
+test_dataset = open(args.test_file, 'r', encoding='utf-8').readlines()
+
 dataset = {}
 dataset['train'] = []
 dataset['validation'] = []
 dataset['test'] = []
-train_dataset = json.load(open(args.train_file, 'r', encoding='utf-8'))
-# fake_train_dataset = open(args.fake_train_file, 'r', encoding='utf-8').readlines()
-# train_dataset = train_dataset + fake_train_dataset
-validation_dataset = json.load(open(args.valid_file, 'r', encoding='utf-8'))
-test_dataset = json.load(open(args.test_file, 'r', encoding='utf-8'))
-
-
 for data in train_dataset:
-    evidences = [data['gold evidence'][str(i)]['text'] for i in range(5)]
+    data = eval(data)
+    if len(data['evidences'])==0:
+        data['evidences'] = ''
+    else:
+        data['evidences'] = ''.join(data['evidences'])
     train_input_example = InputExample(
-        text_a=''.join(evidences),
+        text_a=data['evidences'],
         text_b=data['claim'],
         label=int(data['label'])
     )
     dataset['train'].append(train_input_example)
 
 for data in validation_dataset:
-    evidences = [data['gold evidence'][str(i)]['text'] for i in range(5)]
+    data = eval(data)
+    if len(data['evidences'])==0:
+        data['evidences'] = ''
+    else:
+        data['evidences'] = ''.join(data['evidences'])
     dev_input_example = InputExample(
-        text_a=''.join(evidences),
+        text_a=data['evidences'],
         text_b=data['claim'],
         label=int(data['label'])
     )
     dataset['validation'].append(dev_input_example)
 
 for data in test_dataset:
-    evidences = [data['gold evidence'][str(i)]['text'] for i in range(5)]
+    data = eval(data)
+    if len(data['evidences'])==0:
+        data['evidences'] = ''
+    else:
+        data['evidences'] = ''.join(data['evidences'])
     test_input_example = InputExample(
-        text_a=''.join(evidences),
+        text_a=data['evidences'],
         text_b=data['claim'],
         label=int(data['label'])
     )
@@ -73,66 +94,84 @@ elif args.plm == 'ernie':
     tokenizer = BertTokenizer.from_pretrained("nghuyong/ernie-3.0-base-zh")
     plm = ErnieForMaskedLM.from_pretrained("nghuyong/ernie-3.0-base-zh")
     WrapperClass = MLMTokenizerWrapper
-
+elif args.plm == 'ernie-large':
+    tokenizer = BertTokenizer.from_pretrained("nghuyong/ernie-3.0-xbase-zh")
+    plm = ErnieForMaskedLM.from_pretrained("nghuyong/ernie-3.0-xbase-zh")
+    WrapperClass = MLMTokenizerWrapper
+elif args.plm == 't5':
+    plm, tokenizer, model_config, WrapperClass = load_plm("t5", "ClueAI/PromptCLUE-base-v1-5")  # yechen/bert-large-chinese
+    # tokenizer = AutoTokenizer.from_pretrained("ClueAI/PromptCLUE-base-v1-5")
+    # plm = AutoModelForSeq2SeqLM.from_pretrained("ClueAI/PromptCLUE-base-v1-5")
+    # WrapperClass = T5TokenizerWrapper
+    # plm.resize_token_embeddings(len(tokenizer))
 
 # Constructing Template
 if args.template == 0:
-    template_text = '{"placeholder":"text_a"} {"placeholder":"text_b"}' \
-                    '要評估宣稱和證據的結果是支持或反對，或者未知 {"mask":None, "length":2}'
+    template_text = '證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
+                    '請問宣稱是對的嗎? {"mask":None, "length":2}'
+    # template_text = '證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
+    #                     '要評估宣稱和證據的結果是支持或反對，或者未知 {"mask":None, "length":2}'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
 
 elif args.template == 1:
-    template_text = '{"placeholder":"text_a"} {"placeholder":"text_b"}' \
+    template_text = '證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
                     '{"soft":"要評估宣稱和證據的結果是支持或反對，或者未知"} {"mask":None, "length":2}'
-    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="mlp", text=template_text)
-    # wrapped_example = template.wrap_one_example(dataset['train'][1])
-    # wrapped_tokenizer = WrapperClass(max_seq_length=512, tokenizer=tokenizer,truncate_method="head")
-    # tokenized_example = wrapped_tokenizer.tokenize_one_example(wrapped_example, teacher_forcing=False)
-    # print(tokenized_example)
-    # print(tokenizer.convert_ids_to_tokens(tokenized_example['input_ids']))
+    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
 
 elif args.template == 2:
-    template_text = '{"placeholder":"text_a"} {"placeholder":"text_b"}' \
-                    '{"soft":None, "duplicate":10} ' \
-                    '要評估宣稱和證據的結果是支持或反對，或者未知 {"mask":None, "length":2}'
-    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="mlp", text=template_text)
+    template_text = '{"soft":None, "duplicate":10} 證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
+                    '{"soft":"要評估宣稱和證據的結果是支持或反對，或者未知"} {"mask":None, "length":2}'
+    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
+elif args.template == 3:
+    template_text = '{"soft":None, "duplicate":10} {"placeholder":"text_a"} {"placeholder":"text_b"} {"mask":None, "length":2}'
+    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
+
 
 
 # Load dataloader
 train_dataloader = PromptDataLoader(
     dataset=dataset['train'], template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass, batch_size=args.batch_size,
-    shuffle=True, truncate_method="tail", max_seq_length=args.max_length
+    shuffle=True, truncate_method="tail", max_seq_length=args.max_length,
 )
 
 validation_dataloader = PromptDataLoader(
     dataset=dataset['validation'], template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass, batch_size=args.batch_size,
-    shuffle=True, truncate_method="tail", max_seq_length=args.max_length
+    shuffle=True, truncate_method="tail", max_seq_length=args.max_length,
 )
 
 test_dataloader = PromptDataLoader(
     dataset=dataset['test'], template=template, tokenizer=tokenizer,
     tokenizer_wrapper_class=WrapperClass, batch_size=args.batch_size,
-    shuffle=True, truncate_method="tail", max_seq_length=args.max_length
+    shuffle=False, truncate_method="tail", max_seq_length=args.max_length,
 )
 
 # Define the verbalizer
 verbalizer = ManualVerbalizer(
     classes=[0, 1, 2],
     num_classes=3,
-    label_words={0: ["正確", "支持"], 1: ["錯誤", "反對"], 2: ["未知"]},
+    label_words={0: ["支持"], 1: ["反對"], 2: ["未知"]},
     tokenizer=tokenizer
 )
 
 
 # Load prompt model
-prompt_model = PromptForClassification(
-    plm=plm,
-    template=template,
-    verbalizer=verbalizer,
-    freeze_plm=args.freeze
-)
+if args.plm=='t5':
+    prompt_model = PromptForGeneration(
+        plm=plm,
+        template=template,
+        freeze_plm=args.freeze
+    )
+else:
+    print('args.freeze:', args.freeze)
+    prompt_model = PromptForClassification(
+        plm=plm,
+        template=template,
+        verbalizer=verbalizer,
+        freeze_plm=args.freeze
+    )
+
 prompt_model = prompt_model.to(device)
 
 
@@ -143,27 +182,15 @@ scheduler = get_linear_schedule_with_warmup(
     num_warmup_steps=0,
     num_training_steps=(len(train_dataloader) * args.epochs)
 )
+# early_stopping = EarlyStopping(patience=args.patience, verbose=True)
 
 
-# def get_each_label():
-#     train_label = {0: 0, 1: 0, 2: 0}
-#     for train in train_dataset:
-#         train = eval(train)
-#         train_label[train['label']] += 1
-#     return train_label[0], train_label[1], train_label[2]
-
-
-# sup, ref, nei = get_each_label()
-tot_loss = 0
 best_val_acc = 0
 best_microf1 = 0
 best_macrof1 = 0
 best_recall = 0
 best_precision = 0
 loss_func = torch.nn.CrossEntropyLoss()
-# weight = [1, 1, ref/nei*10]
-# class_weight = torch.FloatTensor(weight).to(device)
-# loss_func = torch.nn.CrossEntropyLoss(weight=class_weight)
 
 # Training
 for epoch in range(args.epochs):
@@ -190,10 +217,9 @@ for epoch in range(args.epochs):
     # ========================================
     #               Validation
     # ========================================
-
     valid_y_pred = []
     valid_y_true = []
-    total_eval_loss = 0
+    total_val_loss = 0
     prompt_model.eval()
     with torch.no_grad():
         for step, inputs in enumerate(tqdm(validation_dataloader, desc="Valid")):
@@ -201,10 +227,11 @@ for epoch in range(args.epochs):
             logits = prompt_model(inputs)
             labels = inputs['label']
             val_loss = loss_func(logits, labels)
-            total_eval_loss += val_loss.sum().item()
+            total_val_loss += val_loss.sum().item()
             valid_y_true.extend(labels.cpu().tolist())
             pred = F.softmax(logits, dim=-1)
             valid_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
+
     pre, recall, f1, _ = precision_recall_fscore_support(valid_y_true, valid_y_pred, average='micro')
     microf1 = f1
     pre, recall, f1, _ = precision_recall_fscore_support(valid_y_true, valid_y_pred, average='macro')
@@ -212,8 +239,22 @@ for epoch in range(args.epochs):
         best_microf1 = microf1
         best_macrof1 = f1
         torch.save(prompt_model.state_dict(), f"./checkpoint/model.ckpt")
-    print("Epoch {}, valid_loss {}".format(epoch, total_eval_loss / len(validation_dataloader)), flush=True)
-    print("Epoch {}, f1 {}".format(epoch, f1), flush=True)
+        # if not os.path.exists(args.model_save_dir):
+        #     os.makedirs(args.model_save_dir)
+        #
+        # print("Saving model to %s" % args.model_save_dir)
+        # model_to_save = prompt_model.module if hasattr(prompt_model, 'module') else prompt_model
+        # # Take care of distributed/parallel training
+        # model_to_save.save_pretrained(args.model_save_dir)
+    print("Epoch {}, valid_loss {}".format(epoch, total_val_loss / len(validation_dataloader)), flush=True)
+    print("Epoch {}, valid f1 {}".format(epoch, f1), flush=True)
+
+    # early_stopping(total_val_loss, prompt_model)
+    # # 若满足 early stopping 要求
+    # if early_stopping.early_stop:
+    #     print("Early stopping")
+    #     # 结束模型训练
+    #     break
 
 # ========================================
 #               Test
@@ -233,14 +274,25 @@ with torch.no_grad():
         pred = F.softmax(logits, dim=-1)
         test_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
 
-print("Accuracy: {:.2%}".format(accuracy_score(test_y_true, test_y_pred)))
+print('true:', test_y_true, '\n', 'pred:', test_y_pred)
+# 检查索引位置上的不匹配
+mismatches = [{'index': i + 1, 'pred': test_y_pred[i], 'true': test_y_true[i]} for i in range(len(test_y_pred)) if
+              test_y_pred[i] != test_y_true[i]]
+# 打印不匹配的索引位置
+print("Mismatched indices:", mismatches)
+
 pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='micro')
+print("Precision (micro): {:.2%}".format(pre))
+print("   Recall (micro): {:.2%}".format(recall))
 print("       F1 (micro): {:.2%}".format(f1))
+
 pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='macro')
 print("Precision (macro): {:.2%}".format(pre))
 print("   Recall (macro): {:.2%}".format(recall))
 print("       F1 (macro): {:.2%}".format(f1))
+
 print("confusion_matrix:\n", confusion_matrix(test_y_true, test_y_pred, labels=[0, 1, 2]))
 print("multilabel_confusion_matrix:\n", multilabel_confusion_matrix(test_y_true, test_y_pred, labels=[0, 1, 2]))
+
 each_label_result = classification_report(test_y_true, test_y_pred)
 print("Each label result:\n", each_label_result)
