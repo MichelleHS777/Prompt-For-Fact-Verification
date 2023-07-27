@@ -1,5 +1,6 @@
 # The Study of Prompt Based Learning for Chinese Fact Checking
-We survey the prompt tuning and parameter efficient fine-tuning methods to implement on chinese fact checking
+Claim Verification: We survey the prompt tuning and parameter efficient fine-tuning methods to implement on chinese fact checking  
+Template Engineering: We generate the prompt by APE
 ## How do we find proper prompt?
 We use Automatic Prompt Engineer to generate the prompts
 ## Claim Verification  
