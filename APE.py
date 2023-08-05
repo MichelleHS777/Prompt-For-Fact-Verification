@@ -2,7 +2,7 @@ import openai
 import json
 
 # ------------------------init parameters----------------------------
-parser = argparse.ArgumentParser(description='P-tuning v2')
+parser = argparse.ArgumentParser(description='Generate Prompts/Templates')
 parser.add_argument('--dataset', type=str, default=None, help='dataset path')
 args = parser.parse_args()
 
