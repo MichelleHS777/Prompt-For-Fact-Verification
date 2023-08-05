@@ -3,6 +3,7 @@
 * Template Engineering: We generate the prompt by APE
 ## How do we find proper prompt?
 We use Automatic Prompt Engineer to generate the prompts
+    python APE.py
 ## Claim Verification  
 * P-Tuning   
 ## Basic Usage
