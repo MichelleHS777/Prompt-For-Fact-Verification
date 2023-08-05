@@ -1,5 +1,6 @@
 import openai
 import json
+import argparse
 
 # ------------------------init parameters----------------------------
 parser = argparse.ArgumentParser(description='Generate Prompts/Templates')
