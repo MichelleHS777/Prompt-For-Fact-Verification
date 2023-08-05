@@ -2,9 +2,9 @@
 * Claim Verification: We survey the prompt tuning and parameter efficient fine-tuning methods to implement on chinese fact checking  
 * Template Engineering: We generate the prompt by APE
 ## Generate prompts by APE?
-1. We get prompts by APE from 20 samples (random choose)    
+    python APE.py --dataset='Path/To/Datasets'
+1. We get prompts by APE from 20 samples (random choose), and save the file
 2. Next Implement the code, and define the dataset path    
-    python APE.py --dataset='./datasets/train.json'
 ## Claim Verification  
 * P-Tuning   
 ## Basic Usage
