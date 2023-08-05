@@ -11,9 +11,9 @@
 `--save_file` save the preprocess file (default='datasets/preprocessed/train.json')  
 ## Claim Verification  
 * P-Tuning   
-## Basic Usage
+### Basic Usage
     python main.py 
-## Parameters
+### Parameters
 `--train_file` default='datasets/preprocessed/train.json'  
 `--valid_file` default='datasets/preprocessed/dev.json'  
 `--test_file` default='datasets/preprocessed/test.json'  
