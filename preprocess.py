@@ -2,7 +2,7 @@ from tqdm import tqdm
 import json
 
 # ------------------------init parameters----------------------------
-parser = argparse.ArgumentParser(description='P-tuning v2')
+parser = argparse.ArgumentParser(description='Preprocess Datasets')
 parser.add_argument('--dataset', type=str, default="'./datasets/unpreprocess/test.json', help='dataset path')
 parser.add_argument('--save_file', type=str, default='datasets/preprocessed/test.json', help='save file path')
 
