@@ -270,12 +270,12 @@ with torch.no_grad():
         pred = F.softmax(logits, dim=-1)
         test_y_pred.extend(torch.argmax(pred, dim=-1).cpu().tolist())
 
-print('true:', test_y_true, '\n', 'pred:', test_y_pred)
-# 检查索引位置上的不匹配
-mismatches = [{'index': i + 1, 'pred': test_y_pred[i], 'true': test_y_true[i]} for i in range(len(test_y_pred)) if
-              test_y_pred[i] != test_y_true[i]]
-# 打印不匹配的索引位置
-print("Mismatched indices:", mismatches)
+# print('true:', test_y_true, '\n', 'pred:', test_y_pred)
+# # 检查索引位置上的不匹配
+# mismatches = [{'index': i + 1, 'pred': test_y_pred[i], 'true': test_y_true[i]} for i in range(len(test_y_pred)) if
+#               test_y_pred[i] != test_y_true[i]]
+# # 打印不匹配的索引位置
+# print("Mismatched indices:", mismatches)
 
 pre, recall, f1, _ = precision_recall_fscore_support(test_y_true, test_y_pred, average='micro')
 print("Precision (micro): {:.2%}".format(pre))
