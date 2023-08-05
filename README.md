@@ -7,7 +7,7 @@
 2. Next Implement the code, and define the dataset path    
 ## Preprocess
     python main.py 
-`--dataset` choose the dataset path you want to preprocess (default='datasets/unpreprocessed/train.json')   
+`--dataset` choose the dataset path you want to preprocess (default='datasets/unpreprocess/train.json')   
 `--save_file` save the preprocess file (default='datasets/preprocessed/train.json')  
 ## Claim Verification  
 * P-Tuning   
