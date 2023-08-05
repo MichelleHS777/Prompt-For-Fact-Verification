@@ -4,7 +4,6 @@ import json
 dataset = json.load(open('./datasets/unpreprocess/test.json', 'r', encoding='utf-8'))
 save_file = open('datasets/preprocessed/test.json', 'w', encoding='utf-8')
 
-
 for data in tqdm(dataset, desc='Preprocess...'):
     claimId = data['claimId']
     claim = data['claim']
