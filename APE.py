@@ -5,6 +5,7 @@ import json
 parser = argparse.ArgumentParser(description='P-tuning v2')
 parser.add_argument('--dataset', type=str, default="./datasets/train.json", help='dataset path')
 args = parser.parse_args()
+
 # set dataset path
 dataset = json.load(open('./datasets/train.json', 'r', encoding='utf-8'))
 # set openai api key
