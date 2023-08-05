@@ -5,6 +5,10 @@
     python APE.py --dataset='PATH/TO/DATASETS'
 1. We get prompts by APE from 20 samples (random choose), and save the file
 2. Next Implement the code, and define the dataset path    
+## Preprocess
+    python main.py 
+`--dataset` choose the dataset path you want to preprocess (default='datasets/unpreprocessed/train.json')   
+`--save_file` save the preprocess file (default='datasets/preprocessed/train.json')  
 ## Claim Verification  
 * P-Tuning   
 ## Basic Usage
