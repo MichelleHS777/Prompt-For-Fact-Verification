@@ -109,10 +109,10 @@ if args.template == 0:
     #                     '要評估宣稱和證據的結果是支持或反對，或者未知 {"mask":None, "length":2}'
     template = ManualTemplate(tokenizer=tokenizer, text=template_text)
 
-elif args.template == 1:
-    template_text = '證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
-                    '{"soft":"要評估宣稱和證據的結果是支持或反對，或者未知"} {"mask":None, "length":2}'
-    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
+# elif args.template == 1:
+#     template_text = '證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
+#                     '{"soft":"要評估宣稱和證據的結果是支持或反對，或者未知"} {"mask":None, "length":2}'
+#     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
 
 elif args.template == 2:
     template_text = '{"soft":None, "duplicate":10} 證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
