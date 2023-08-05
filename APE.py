@@ -3,7 +3,7 @@ import json
 
 
 openai.api_key = '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'
-dataset = json.load(open('./datasets/train2.json', 'r', encoding='utf-8'))
+dataset = json.load(open('./datasets/train.json', 'r', encoding='utf-8'))
 
 # First, let's define a simple dataset consisting of claim and label
 
