@@ -16,11 +16,11 @@ label_mapping = {0:'支持',1:'反对',2:'信息不足'}
 claim_evidence = []
 for i in range(len(dataset)):
     claim = dataset[i]['claim']
-    evidences = [dataset[i]['gold evidence'][str(j)]['text'] for j in range(1)]
-    evidences = ''.join(evidences)
+    evidences = [dataset[i]['gold evidence'][str(j)]['text'] for j in range(1)] # get one evidence
+    evidences = ''.join(evidences) 
     claim_evidence_text = '主张: ' + claim + '证据: ' + evidences
     claim_evidence.append(claim_evidence_text)
-label = [label_mapping[dataset[i]['label']] for i in range(20)]
+label = [label_mapping[dataset[i]['label']] for i in range(20)] # get labels from 20 samples
 
 # Now, we need to define the format of the prompt that we are using.
 eval_template = \
