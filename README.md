@@ -21,3 +21,5 @@
 `--template` default=0 
 ( 0: manual / 2: Ptuning (soft: 10 + APE))  
 `--verbalizer` default=0 (manual verbalizer)
+## Checkpoint
+* [Checkpoint](https://drive.google.com/drive/folders/16XMpllhRwVSntn17gZxjqFOusbXB9Myq?usp=sharing)
