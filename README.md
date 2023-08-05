@@ -19,5 +19,5 @@
 `--test_file` default='datasets/preprocessed/test.json'  
 `--plm` default='bert'  
 `--template` default=0 
-( 0: manual / 1: Ptuning (soft APE) / 2: Ptuning (soft: 10 + APE))  
+( 0: manual / 2: Ptuning (soft: 10 + APE))  
 `--verbalizer` default=0 (manual verbalizer)
