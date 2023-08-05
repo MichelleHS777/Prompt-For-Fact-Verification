@@ -23,9 +23,8 @@ args = set_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
-
+# 計算模型的訓練參數量
 def get_parameters(model):
-    # 計算模型的訓練參數量
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     return total_params, trainable_params
@@ -38,6 +37,7 @@ if args.data_aug:
 validation_dataset = open(args.valid_file, 'r', encoding='utf-8').readlines()
 test_dataset = open(args.test_file, 'r', encoding='utf-8').readlines()
 
+# wrap datasets to input format
 dataset = {}
 dataset['train'] = []
 dataset['validation'] = []
@@ -118,9 +118,9 @@ elif args.template == 2:
     template_text = '{"soft":None, "duplicate":10} 證據:{"placeholder":"text_a"} 宣稱:{"placeholder":"text_b"}' \
                     '{"soft":"要評估宣稱和證據的結果是支持或反對，或者未知"} {"mask":None, "length":2}'
     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
-elif args.template == 3:
-    template_text = '{"soft":None, "duplicate":10} {"placeholder":"text_a"} {"placeholder":"text_b"} {"mask":None, "length":2}'
-    template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
+# elif args.template == 3:
+#     template_text = '{"soft":None, "duplicate":10} {"placeholder":"text_a"} {"placeholder":"text_b"} {"mask":None, "length":2}'
+#     template = PtuningTemplate(model=plm, tokenizer=tokenizer, prompt_encoder_type="lstm", text=template_text)
 
 
 
