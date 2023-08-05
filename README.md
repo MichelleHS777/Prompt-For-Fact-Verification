@@ -4,7 +4,7 @@
 ## Generate prompts by APE?
 ### First, we get prompts by APE from 20 samples (random choose)
 ### Next Implement the code, and define the dataset path
-    python APE.py --dataset='datasets/preprocessed/train.json'
+    python APE.py --dataset='./datasets/train.json'
 ## Claim Verification  
 * P-Tuning   
 ## Basic Usage
